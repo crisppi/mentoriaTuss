@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -37,36 +36,20 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
-    print("Enviando email=$email senha=$senha");
 
-    final url = Uri.parse('http://192.168.6.223/mentoriaTuss/login.php');
+    final url = Uri.parse('http://192.168.15.93/mentoriaPhp/login.php');
 
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Conectando ao servidor...")),
-      );
-
       final response = await http.post(
-
         url,
-        body: {
-          'email': email,
-          'senha': senha,
-        },
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'senha': senha}),
       );
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Conectado com o servidor.")),
-        );
-
         final data = jsonDecode(response.body);
 
         if (data['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Conectado com o banco de dados.")),
-          );
-
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => PesquisaTussScreen()),
@@ -89,7 +72,24 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-
+  Widget _buildTextField(TextEditingController controller, String label, bool isPassword) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword,
+      style: TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.white70),
+        filled: true,
+        fillColor: Colors.black.withOpacity(0.4),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,54 +97,44 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue.shade900, Colors.purple.shade900],
+            colors: [Colors.indigo.shade900, Colors.deepPurple.shade700],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
         ),
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Icon(Icons.monitor_heart , size: 65, color: Colors.white),
+                SizedBox(height: 22),
                 Text(
-                  "Login",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                SizedBox(height: 20),
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: "E-mail",
-                    labelStyle: TextStyle(color: Colors.white),
-                    filled: true,
-                    fillColor: Colors.black,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  "Acessoria TUSS",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1.2,
                   ),
-                  style: TextStyle(color: Colors.white),
                 ),
-                SizedBox(height: 10),
-                TextField(
-                  controller: senhaController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: "Senha",
-                    labelStyle: TextStyle(color: Colors.white),
-                    filled: true,
-                    fillColor: Colors.black,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  style: TextStyle(color: Colors.white),
-                ),
-                SizedBox(height: 20),
+                SizedBox(height: 32),
+                _buildTextField(emailController, "E-mail", false),
+                SizedBox(height: 16),
+                _buildTextField(senhaController, "Senha", true),
+                SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: _login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                    padding: EdgeInsets.symmetric(horizontal: 60, vertical: 18),
+                    backgroundColor: Colors.deepPurple,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 6,
                   ),
-                  child: Text("Login", style: TextStyle(fontSize: 18)),
+                  child: Text("Entrar", style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
               ],
             ),
@@ -154,7 +144,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
 class PesquisaTussScreen extends StatefulWidget {
   @override
   _PesquisaTussScreenState createState() => _PesquisaTussScreenState();
@@ -172,16 +161,24 @@ class _PesquisaTussScreenState extends State<PesquisaTussScreen> {
   }
 
   Future<void> carregarDados() async {
+    final url = Uri.parse('http://192.168.15.93/mentoriaPhp/get_procedimentos.php');
+
     try {
-      String jsonString = await rootBundle.loadString('assets/tabela_mentoria.json');
-      setState(() {
-        dados = json.decode(jsonString);
-        resultados = List.from(dados);
-      });
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          dados = json.decode(response.body);
+          resultados = List.from(dados);
+        });
+      } else {
+        print("Erro ao buscar dados: ${response.statusCode}");
+      }
     } catch (e) {
-      print("Erro ao carregar o JSON: $e");
+      print("Erro ao carregar do servidor: $e");
     }
   }
+
 
   void filtrarPesquisa(String query) {
     setState(() {
